@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/src_generator
+    volumes:
+      - ./logs:/app/logs
+      - ./output:/app/output
+      - ./temp:/app/temp
+    depends_on:
+      - postgres
+    networks:
+      - src-generator
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - STREAMLIT_HOST=0.0.0.0
+      - STREAMLIT_PORT=8501
+    depends_on:
+      - backend
+    networks:
+      - src-generator
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=src_generator
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - src-generator
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - src-generator
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  src-generator:
+    driver: bridge
